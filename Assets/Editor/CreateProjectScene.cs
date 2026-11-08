@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.IO;
 public static class CreateProjectScene {
+    [InitializeOnLoadMethod]
+    static void AutoSetup(){ EditorApplication.delayCall += () => { if(!File.Exists("Assets/Scenes/Main.unity")) Create(); }; }
     [MenuItem("Music Ball Brasil/Criar cena inicial")]
     public static void Create() {
         Directory.CreateDirectory("Assets/Scenes");
