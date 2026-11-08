@@ -8,25 +8,58 @@
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
 const $=id=>document.getElementById(id);
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x050817);scene.fog=new THREE.FogExp2(0x050817,.012);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x292a2e);scene.fog=new THREE.FogExp2(0x292a2e,.004);
 const camera=new THREE.PerspectiveCamera(64,innerWidth/innerHeight,.1,450);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;$('scene').appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0x7dafff,0x090619,1.5));
 const sun=new THREE.DirectionalLight(0xffffff,2.4);sun.position.set(-8,18,-10);scene.add(sun);
 const glow=new THREE.PointLight(0x39cfff,18,18);scene.add(glow);
 const mat=(color,metalness=.55,roughness=.27)=>new THREE.MeshStandardMaterial({color,metalness,roughness});
-const railMat=mat(0x53627e,.85,.22),edgeMat=new THREE.MeshStandardMaterial({color:0x22b9ff,emissive:0x0873a8,emissiveIntensity:1.4,metalness:.7,roughness:.18});
+const railMat=mat(0x858b94,.92,.18),edgeMat=new THREE.MeshStandardMaterial({color:0xb8c4d0,metalness:.95,roughness:.15});
 const gold=mat(0xeab75d,.8,.22),purple=mat(0x965bff,.7,.23),cyan=mat(0x40e6f9,.7,.2);
-const orb=new THREE.Mesh(new THREE.SphereGeometry(.48,32,24),mat(0xc8eaff,.9,.1));scene.add(orb);
-const inner=new THREE.Mesh(new THREE.IcosahedronGeometry(.29,1),new THREE.MeshStandardMaterial({color:0x3bd7ff,emissive:0x0b88d4,emissiveIntensity:2}));orb.add(inner);
-const floor=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),new THREE.MeshStandardMaterial({color:0x080d20,roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=-7;scene.add(floor);
+const orb=new THREE.Mesh(new THREE.SphereGeometry(.48,32,24),mat(0xe64b32,.85,.15));scene.add(orb);
+const inner=new THREE.Mesh(new THREE.TorusGeometry(.38,.075,8,32),new THREE.MeshStandardMaterial({color:0xffbb74,emissive:0xc92b13,emissiveIntensity:.8,metalness:.6,roughness:.2}));inner.rotation.y=Math.PI/2;orb.add(inner);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),new THREE.MeshStandardMaterial({color:0x303136,roughness:.9}));floor.rotation.x=-Math.PI/2;floor.position.y=-24;scene.add(floor);
 const stars=[];const starGeo=new THREE.BufferGeometry();const positions=[];for(let i=0;i<650;i++){positions.push((Math.random()-.5)*180,Math.random()*75-8,(Math.random()-.5)*400)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x7995c9,size:.17})));
 let pads=[],segments=[],distance=0,lastHit=-1,mode='sync',cameraMode=0,elapsed=0,beatStrength=0,beatInterval=.5,lastBeatTime=0,detectedBpm=120;
 let onsets=[],analysisReady=false,analysisBusy=false,hitIndex=-1,previewClock=0;const TRACK_START=8,TRACK_END=380;
 const cylinder=(radius,length,material)=>{let o=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,10),material);o.rotation.x=Math.PI/2;return o};
-function pathX(z){let offset=mode==='infinite'?1.6:mode==='surprise'?2.4:1;return Math.sin(z*.047)*3.2*offset+Math.sin(z*.014)*1.8}
-function clearWorld(){for(const obj of [...pads,...segments])scene.remove(obj);pads=[];segments=[]}
-function createWorld(){clearWorld();for(let i=0;i<180;i++){const z=i*2.2,x=pathX(z),nextX=pathX(z+2.2);let base=new THREE.Mesh(new THREE.BoxGeometry(2.6,.23,2.27),railMat);base.position.set(x,-.82,z);base.rotation.y=-Math.atan2(nextX-x,2.2);scene.add(base);segments.push(base);for(let side of [-1,1]){let strip=new THREE.Mesh(new THREE.BoxGeometry(.065,.13,2.25),edgeMat);strip.position.set(x+side*1.24,-.64,z);strip.rotation.y=base.rotation.y;scene.add(strip);segments.push(strip)}if(i%4===0){let type=(i/4)%5;let obj;if(type===0){obj=new THREE.Mesh(new THREE.TorusGeometry(.76,.09,10,24),gold);obj.rotation.x=Math.PI/2}else if(type===1){obj=new THREE.Mesh(new THREE.CylinderGeometry(.85,.85,.13,32),cyan)}else if(type===2){obj=new THREE.Mesh(new THREE.OctahedronGeometry(.65),purple)}else if(type===3){obj=new THREE.Mesh(new THREE.TorusKnotGeometry(.44,.12,40,8),gold)}else{obj=new THREE.Mesh(new THREE.BoxGeometry(1.25,.17,.9),purple)}obj.position.set(x,-.42,z);scene.add(obj);pads.push(obj)}}}
+function pathX(z){return Math.sin(z*.039)*3.5+Math.sin(z*.013)*1.6}
+function clearWorld(){for(const obj of [...pads,...segments]){scene.remove(obj);if(obj.geometry)obj.geometry.dispose()}pads=[];segments=[]}
+function createWorld(){
+ clearWorld();
+ // Trilhos curvos suspensos, sem pista sólida: pares de fios e travessas metálicas.
+ for(let i=0;i<350;i++){
+  const z=i*1.15,x=pathX(z),nx=pathX(z+1.15);
+  for(let side of [-1,1]){
+   const wire=new THREE.Mesh(new THREE.CylinderGeometry(.028,.028,1.23,6),railMat);
+   wire.rotation.x=Math.PI/2;wire.rotation.y=Math.atan2(nx-x,1.15);
+   wire.position.set(x+side*.85,-.38,z);scene.add(wire);segments.push(wire);
+  }
+  if(i%5===0){
+   const rung=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,1.7,6),edgeMat);
+   rung.rotation.z=Math.PI/2;rung.position.set(x,-.38,z);scene.add(rung);segments.push(rung);
+  }
+ }
+ for(let i=0;i<44;i++){
+  const z=8+i*8.8,x=pathX(z),kind=i%6;
+  let obj;
+  if(kind===0){obj=new THREE.Mesh(new THREE.TorusGeometry(.7,.12,12,32),gold);obj.rotation.x=Math.PI/2}
+  else if(kind===1){obj=new THREE.Mesh(new THREE.CylinderGeometry(.67,.67,.12,32),cyan);obj.rotation.x=Math.PI/2}
+  else if(kind===2){obj=new THREE.Mesh(new THREE.BoxGeometry(1.25,.17,.8),railMat);obj.rotation.z=.4}
+  else if(kind===3){obj=new THREE.Mesh(new THREE.TorusKnotGeometry(.35,.1,48,8),purple)}
+  else if(kind===4){obj=new THREE.Mesh(new THREE.OctahedronGeometry(.56),gold)}
+  else {obj=new THREE.Mesh(new THREE.CylinderGeometry(.4,.5,.7,12),railMat);obj.rotation.x=.7}
+  obj.position.set(x,-.15,z);scene.add(obj);pads.push(obj);
+  // Instrumentos laterais suspensos, como os conjuntos do vídeo.
+  for(let side of [-1,1]){
+   const bracket=new THREE.Mesh(new THREE.BoxGeometry(.12,1.3,.12),railMat);
+   bracket.position.set(x+side*2.1,.45,z);bracket.rotation.z=side*.22;scene.add(bracket);segments.push(bracket);
+   const piece=new THREE.Mesh(kind%2?new THREE.TorusGeometry(.5,.1,10,20):new THREE.BoxGeometry(.8,.9,.15),kind%3===0?gold:kind%3===1?railMat:purple);
+   piece.position.set(x+side*2.35,.85,z);piece.rotation.y=side*.5;scene.add(piece);segments.push(piece);
+  }
+ }
+}
 createWorld();
 let audio=new Audio();audio.preload='auto';audio.crossOrigin='anonymous';let ctx,analyser,source,gain,frequencyData,playlist=[],current=-1,playing=false,urls=[];
 function initAudio(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();source=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=1024;frequencyData=new Uint8Array(analyser.frequencyBinCount);gain=ctx.createGain();source.connect(analyser);analyser.connect(gain);gain.connect(ctx.destination);gain.gain.value=+$('volume').value/100}
@@ -115,11 +148,11 @@ glow.position.set(x,2,distance);glow.intensity=12+beatStrength*24;
 if(playing&&analysisReady&&location.index>hitIndex&&location.index>=0){
  hitIndex=location.index;beatStrength=1;
  // Impacto visual no tempo do audio; a percussao original continua audivel, sem "tu-tu" artificial.
- const pad=pads[location.index%pads.length];if(pad)pad.scale.setScalar(1.65);
+ const pad=pads[location.index%pads.length];if(pad){pad.scale.setScalar(1.65);glow.color.setHSL((location.index%6)/6,.8,.6)}
 }
 if(playing&&analysisReady&&location.index<hitIndex)hitIndex=location.index;
 for(const pad of pads){pad.scale.lerp(new THREE.Vector3(1,1,1),Math.min(1,dt*8));pad.rotation.y+=dt*.18}
-let target;if(cameraMode===0)target=new THREE.Vector3(x,4.5,distance-10);else if(cameraMode===1)target=new THREE.Vector3(x+8,5,distance-3);else target=new THREE.Vector3(x,11,distance-5);
-camera.position.lerp(target,Math.min(1,dt*3));camera.lookAt(x,.1,distance+8);renderer.render(scene,camera)}
+let target;if(cameraMode===0)target=new THREE.Vector3(x+5,7,distance-12);else if(cameraMode===1)target=new THREE.Vector3(x+10,4,distance-4);else target=new THREE.Vector3(x,14,distance-8);
+camera.position.lerp(target,Math.min(1,dt*3));camera.lookAt(x,.1,distance+4);renderer.render(scene,camera)}
 requestAnimationFrame(frame);$('status').textContent='Escolha uma música: o percurso seguirá os ataques detectados';
 </script></body></html>
