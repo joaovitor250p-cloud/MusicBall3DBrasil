@@ -3,6 +3,12 @@ using System.Collections.Generic;
 public class MusicWorld : MonoBehaviour {
     public AudioSource music;
     Transform ball;
+    public Vector3 BallPosition => ball != null ? ball.position : Vector3.zero;
+    MusicPlayer player;
+    BeatTracker tracker;
+    MusicSettings settings;
+    InstrumentSynth synth;
+    int lastPad=-1;
     readonly List<Transform> pads = new List<Transform>();
     float travel;
     void Start() {
@@ -30,15 +36,31 @@ public class MusicWorld : MonoBehaviour {
                 pads.Add(pad.transform);
             }
         }
-        music=gameObject.AddComponent<AudioSource>();
-        music.playOnAwake=false;
+        settings=FindFirstObjectByType<MusicSettings>();
+        if(!settings)settings=new GameObject("Configuracoes").AddComponent<MusicSettings>();
+        player=FindFirstObjectByType<MusicPlayer>();
+        tracker=gameObject.AddComponent<BeatTracker>();tracker.player=player;
+        synth=gameObject.AddComponent<InstrumentSynth>();
+        var effects=gameObject.AddComponent<WorldEffects>();effects.world=this;effects.tracker=tracker;
     }
     void Update() {
-        float speed=music && music.isPlaying ? 5f + Mathf.Clamp(music.volume*2,0,2) : 3f;
+        if(player==null)player=FindFirstObjectByType<MusicPlayer>();
+        if(tracker!=null&&tracker.player==null)tracker.player=player;
+        float energy=tracker!=null?tracker.energy:0;
+        float speed=player!=null&&player.output!=null&&player.output.isPlaying?5f+energy*3f:3f;
+        if(settings!=null&&settings.mode==VisualMode.Infinito)speed+=Mathf.Sin(Time.time*.7f)*.6f;
+        if(settings!=null&&settings.mode==VisualMode.Surpresa)speed+=Mathf.Sin(Time.time*.3f)*1.2f;
         travel=Mathf.Repeat(travel+Time.deltaTime*speed,245f);
         float x=Mathf.Sin(travel*.09f)*2;
         ball.position=new Vector3(x,.2f+Mathf.Abs(Mathf.Sin(travel*1.8f))*.25f,travel);
-        ball.Rotate(Vector3.right,Time.deltaTime*420);
+        ball.Rotate(Vector3.right,Time.deltaTime*(420+energy*200));
+        int padIndex=Mathf.RoundToInt(travel/10f);
+        if(padIndex!=lastPad&&padIndex>=0&&padIndex<pads.Count&&Mathf.Abs(travel-padIndex*10f)<.7f){
+            lastPad=padIndex;
+            if(synth!=null)synth.Strike(padIndex,.4f+energy*.6f);
+            pads[padIndex].localScale=new Vector3(1.1f,.18f,1.1f);
+        }
+        foreach(var pad in pads)if(pad!=null)pad.localScale=Vector3.Lerp(pad.localScale,new Vector3(.85f,.12f,.85f),Time.deltaTime*5);
         if(Camera.main) {
             Vector3 target=ball.position+new Vector3(0,4,-9);
             Camera.main.transform.position=Vector3.Lerp(Camera.main.transform.position,target,Time.deltaTime*4);
