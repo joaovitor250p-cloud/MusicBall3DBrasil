@@ -118,7 +118,7 @@ function trackAtTime(t){
  const phase=Math.max(0,Math.min(1,(t-prev)/Math.max(.01,next-prev)));
  // O instrumento seguinte é alcançado exatamente na marca temporal detectada.
  const step=8.8;
- const z=TRACK_START+Math.min(42,lo)*step-(1-phase)*step;
+ const z=TRACK_START+(lo%42)*step-(1-phase)*step;
  return {z:Math.max(0,z),index,phase};
 }
 function updateTracks(){let root=$('tracks');root.textContent='';playlist.forEach((song,i)=>{let row=document.createElement('div');row.className='track';let name=document.createElement('span');name.textContent=(i===current?'▶ ':'')+song.name;row.append(name);for(let [label,fn] of [['▶',()=>playIndex(i)],['↑',()=>move(i,-1)],['↓',()=>move(i,1)],['✕',()=>remove(i)]]){let b=document.createElement('button');b.textContent=label;b.onclick=fn;row.append(b)}root.append(row)})}
@@ -148,7 +148,7 @@ glow.position.set(x,2,distance);glow.intensity=12+beatStrength*24;
 if(playing&&analysisReady&&location.index>hitIndex&&location.index>=0){
  hitIndex=location.index;beatStrength=1;
  // Impacto visual no tempo do audio; a percussao original continua audivel, sem "tu-tu" artificial.
- const pad=pads[location.index%pads.length];if(pad){pad.scale.setScalar(1.65);glow.color.setHSL((location.index%6)/6,.8,.6)}
+ const pad=pads[location.index%pads.length];if(pad){pad.scale.setScalar(1.65);pad.rotation.z+=.3;glow.color.setHSL((location.index%6)/6,.8,.6)}
 }
 if(playing&&analysisReady&&location.index<hitIndex)hitIndex=location.index;
 for(const pad of pads){pad.scale.lerp(new THREE.Vector3(1,1,1),Math.min(1,dt*8));pad.rotation.y+=dt*.18}
