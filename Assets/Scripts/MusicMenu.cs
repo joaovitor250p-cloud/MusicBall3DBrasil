@@ -1,6 +1,6 @@
 using UnityEngine;
 public class MusicMenu : MonoBehaviour {
- MusicLibrary library; MusicPlayer player;
+ MusicLibrary library; MusicPlayer player; MusicSettings settings;
  Vector2 scroll; bool showList=true;
  void Start(){
   library=FindFirstObjectByType<MusicLibrary>();
@@ -8,6 +8,7 @@ public class MusicMenu : MonoBehaviour {
   player=FindFirstObjectByType<MusicPlayer>();
   if(!player)player=new GameObject("Reprodutor").AddComponent<MusicPlayer>();
   player.library=library;
+  settings=FindFirstObjectByType<MusicSettings>();
  }
  void OnGUI(){
   float scale=Mathf.Max(1f,Screen.width/420f);GUI.matrix=Matrix4x4.Scale(new Vector3(scale,scale,1));
@@ -19,6 +20,8 @@ public class MusicMenu : MonoBehaviour {
   GUILayout.EndHorizontal();
   if(showList){
    GUILayout.Label("MUSIC BALL 3D BRASIL");
+   if(settings!=null&&GUILayout.Button("Modo: "+settings.mode,GUILayout.Height(42)))settings.NextMode();
+   if(settings!=null){GUILayout.Label("Volume");settings.masterVolume=GUILayout.HorizontalSlider(settings.masterVolume,0,1);settings.Apply(player);}
    scroll=GUILayout.BeginScrollView(scroll,GUILayout.Height(h*.58f));
    for(int i=0;i<library.songs.Count;i++){
     int n=i;GUILayout.BeginHorizontal();
