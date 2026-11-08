@@ -4,7 +4,7 @@
 *{box-sizing:border-box}body{margin:0;background:#070b18;color:#f3f5ff;font:15px system-ui,Arial;overflow:hidden}canvas{display:block}#scene{position:fixed;inset:0}#ui{position:fixed;inset:0;pointer-events:none}button,input,select{font:inherit}button{background:#252e4b;color:white;border:1px solid #49577c;border-radius:12px;padding:10px 13px;cursor:pointer}button:active{background:#465c94}.primary{background:linear-gradient(120deg,#1677ee,#a03bda);border:0}.top{position:absolute;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;display:flex;align-items:center;gap:8px;pointer-events:auto}.brand{font-weight:800;letter-spacing:.4px;text-shadow:0 2px 10px #000;flex:1}.pill{background:#141e36bb;border:1px solid #53617b;border-radius:30px;padding:8px 12px;font-size:12px}.bottom{position:absolute;bottom:max(12px,env(safe-area-inset-bottom));left:12px;right:12px;pointer-events:auto;display:grid;gap:8px}.panel{background:#10182ce8;border:1px solid #354563;border-radius:18px;padding:12px;backdrop-filter:blur(12px);box-shadow:0 12px 40px #0008}.row{display:flex;gap:8px;align-items:center}.row>*{min-width:0}.grow{flex:1}.song{white-space:nowrap;text-overflow:ellipsis;overflow:hidden;font-weight:700}.muted{color:#a9b6d4;font-size:12px}.controls{display:flex;gap:8px;align-items:center;justify-content:space-between}.controls button{flex:1}#library{display:none;position:absolute;inset:70px 12px 115px;pointer-events:auto;overflow:auto;background:#10182cf5;border:1px solid #394b71;border-radius:20px;padding:16px}#library.open{display:block}.track{padding:9px 0;border-bottom:1px solid #293750;display:flex;gap:6px;align-items:center}.track span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.track button{padding:7px}.status{position:absolute;top:65px;left:12px;right:12px;text-align:center;pointer-events:none;color:#bbcdf2;font-size:12px}select{background:#202c49;color:white;border:1px solid #465b7e;border-radius:10px;padding:9px;max-width:100%}input[type=range]{width:90px}#file{display:none}@media(min-width:700px){.bottom{max-width:500px;left:50%;transform:translateX(-50%)}#library{max-width:500px;left:50%;right:auto;width:500px;transform:translateX(-50%)}}
 </style></head><body><div id="scene"></div><div id="ui"><div class="top"><div class="brand">🎵 MUSIC BALL <span style="color:#66c7ff">3D</span> BRASIL</div><button id="listBtn">☰ Playlist</button></div><div class="status" id="status">Carregando cenário 3D...</div>
 <div id="library"><div class="row"><h2 class="grow" style="margin:0">Suas músicas</h2><button id="closeBtn">✕</button></div><p class="muted">Selecione músicas MP3, WAV, OGG ou M4A do seu celular. A ordem da lista é a ordem de reprodução.</p><button class="primary" id="addBtn">＋ Adicionar músicas</button><input id="file" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" multiple><div id="tracks"></div><p class="muted">As músicas ficam no aparelho; por segurança do navegador, selecione novamente os arquivos após fechar a página.</p></div>
-<div class="bottom"><div class="panel"><div class="row"><div class="grow"><div class="song" id="songName">Selecione suas músicas</div><div class="muted" id="songMeta">Visualização 3D automática • sons de instrumentos</div></div><span class="pill" id="beat">♪ 120 BPM</span></div><div class="row" style="margin:12px 0"><select id="mode" class="grow"><option value="sync">🎯 Sincronizado</option><option value="infinite">♾️ Infinito</option><option value="surprise">✨ Surpresa</option></select><label class="muted">Som <input id="volume" type="range" min="0" max="100" value="65"></label></div><div class="controls"><button id="prev">⏮</button><button class="primary" id="play">▶ Tocar</button><button id="next">⏭</button><button id="camera">📷</button></div></div></div></div>
+<div class="bottom"><div class="panel"><div class="row"><div class="grow"><div class="song" id="songName">Selecione suas músicas</div><div class="muted" id="songMeta">Análise antecipada de batidas • impactos no ritmo</div></div><span class="pill" id="beat">♪ 120 BPM</span></div><div class="row" style="margin:12px 0"><select id="mode" class="grow"><option value="sync">🎯 Batidas detectadas</option><option value="infinite">♾️ Infinito</option><option value="surprise">✨ Surpresa</option></select><label class="muted">Som <input id="volume" type="range" min="0" max="100" value="65"></label></div><div class="controls"><button id="prev">⏮</button><button class="primary" id="play">▶ Tocar</button><button id="next">⏭</button><button id="camera">📷</button></div></div></div></div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
 const $=id=>document.getElementById(id);
@@ -22,6 +22,7 @@ const inner=new THREE.Mesh(new THREE.IcosahedronGeometry(.29,1),new THREE.MeshSt
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),new THREE.MeshStandardMaterial({color:0x080d20,roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=-7;scene.add(floor);
 const stars=[];const starGeo=new THREE.BufferGeometry();const positions=[];for(let i=0;i<650;i++){positions.push((Math.random()-.5)*180,Math.random()*75-8,(Math.random()-.5)*400)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x7995c9,size:.17})));
 let pads=[],segments=[],distance=0,lastHit=-1,mode='sync',cameraMode=0,elapsed=0,beatStrength=0,beatInterval=.5,lastBeatTime=0,detectedBpm=120;
+let onsets=[],analysisReady=false,analysisBusy=false,hitIndex=-1,previewClock=0;const TRACK_START=8,TRACK_END=380;
 const cylinder=(radius,length,material)=>{let o=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,10),material);o.rotation.x=Math.PI/2;return o};
 function pathX(z){let offset=mode==='infinite'?1.6:mode==='surprise'?2.4:1;return Math.sin(z*.047)*3.2*offset+Math.sin(z*.014)*1.8}
 function clearWorld(){for(const obj of [...pads,...segments])scene.remove(obj);pads=[];segments=[]}
@@ -30,11 +31,68 @@ createWorld();
 let audio=new Audio();audio.preload='auto';audio.crossOrigin='anonymous';let ctx,analyser,source,gain,frequencyData,playlist=[],current=-1,playing=false,urls=[];
 function initAudio(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();source=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=1024;frequencyData=new Uint8Array(analyser.frequencyBinCount);gain=ctx.createGain();source.connect(analyser);analyser.connect(gain);gain.connect(ctx.destination);gain.gain.value=+$('volume').value/100}
 function tone(note=0,strength=.5){if(!ctx)return;const osc=ctx.createOscillator(),env=ctx.createGain();let now=ctx.currentTime;osc.type=['sine','triangle','sine','square'][note%4];osc.frequency.setValueAtTime([220,330,440,554,659,784][note%6],now);osc.frequency.exponentialRampToValueAtTime([220,330,440,554,659,784][note%6]*.72,now+.18);env.gain.setValueAtTime(.0001,now);env.gain.exponentialRampToValueAtTime(Math.max(.001,strength*.13),now+.012);env.gain.exponentialRampToValueAtTime(.0001,now+.32);osc.connect(env);env.connect(gain);osc.start(now);osc.stop(now+.35)}
+// Analise antecipada: energia de transientes em janelas de 10ms, com filtro adaptativo.
+// Os eventos resultantes governam tanto a posicao quanto o impacto dos objetos 3D.
+async function analyzeSong(file){
+ analysisReady=false;analysisBusy=true;onsets=[];hitIndex=-1;
+ $('status').textContent='Analisando as batidas da música...';
+ try{
+  initAudio();await ctx.resume();
+  const bytes=await file.arrayBuffer();
+  const buffer=await ctx.decodeAudioData(bytes.slice(0));
+  const sr=buffer.sampleRate,channels=buffer.numberOfChannels;
+  const hop=Math.max(256,Math.round(sr*.01)),length=Math.ceil(buffer.length/hop);
+  const signal=new Float32Array(length);
+  for(let i=0;i<length;i++){
+   let sum=0,n=0;const start=i*hop,end=Math.min(buffer.length,start+hop);
+   for(let c=0;c<channels;c++){const samples=buffer.getChannelData(c);
+    for(let j=start;j<end;j+=4){const x=samples[j];sum+=x*x;n++}}
+   signal[i]=Math.sqrt(sum/Math.max(1,n));
+  }
+  const novelty=new Float32Array(length);
+  for(let i=2;i<length;i++)novelty[i]=Math.max(0,signal[i]-signal[i-2])+
+   .25*Math.max(0,signal[i]-signal[Math.max(0,i-8)]);
+  const candidate=[];
+  for(let i=8;i<length-8;i++){
+   let mean=0;for(let j=i-7;j<=i+7;j++)mean+=novelty[j];mean/=15;
+   if(novelty[i]>Math.max(.004,mean*1.75)&&novelty[i]>=novelty[i-1]&&novelty[i]>novelty[i+1])
+    candidate.push({t:i*hop/sr,v:novelty[i]});
+  }
+  candidate.sort((a,b)=>b.v-a.v);
+  let accepted=[];
+  for(const p of candidate){
+   if(accepted.every(q=>Math.abs(q.t-p.t)>.16))accepted.push(p);
+   if(accepted.length>=Math.min(1200,Math.ceil(buffer.duration*4)))break;
+  }
+  accepted.sort((a,b)=>a.t-b.t);
+  onsets=accepted.map(p=>p.t);
+  // Quando a detecção é insuficiente, não inventar batidas: manter movimento contínuo sem impactos falsos.
+  if(onsets.length>=3){
+   const intervals=[];for(let i=1;i<onsets.length;i++){const d=onsets[i]-onsets[i-1];if(d>.25&&d<1.1)intervals.push(d)}
+   intervals.sort((a,b)=>a-b);if(intervals.length)detectedBpm=Math.round(60/intervals[Math.floor(intervals.length/2)]);
+  }
+  analysisReady=true;
+  $('status').textContent=onsets.length+' ataques musicais detectados • animação sincronizada';
+ }catch(err){console.error(err);$('status').textContent='Não foi possível analisar este áudio; sincronização indisponível.'}
+ finally{analysisBusy=false}
+}
+function trackAtTime(t){
+ if(!onsets.length)return {z:TRACK_START+(t*5)%340,index:-1,phase:0};
+ let lo=0,hi=onsets.length;
+ while(lo<hi){let m=(lo+hi)>>1;if(onsets[m]<=t)lo=m+1;else hi=m}
+ const index=lo-1,next=onsets[Math.min(lo,onsets.length-1)];
+ const prev=index>=0?onsets[index]:0;
+ const phase=Math.max(0,Math.min(1,(t-prev)/Math.max(.01,next-prev)));
+ // O instrumento seguinte é alcançado exatamente na marca temporal detectada.
+ const step=8.8;
+ const z=TRACK_START+Math.min(42,lo)*step-(1-phase)*step;
+ return {z:Math.max(0,z),index,phase};
+}
 function updateTracks(){let root=$('tracks');root.textContent='';playlist.forEach((song,i)=>{let row=document.createElement('div');row.className='track';let name=document.createElement('span');name.textContent=(i===current?'▶ ':'')+song.name;row.append(name);for(let [label,fn] of [['▶',()=>playIndex(i)],['↑',()=>move(i,-1)],['↓',()=>move(i,1)],['✕',()=>remove(i)]]){let b=document.createElement('button');b.textContent=label;b.onclick=fn;row.append(b)}root.append(row)})}
 function move(i,d){let j=i+d;if(j<0||j>=playlist.length)return;[playlist[i],playlist[j]]=[playlist[j],playlist[i]];if(current===i)current=j;else if(current===j)current=i;updateTracks()}
 function remove(i){if(current===i){audio.pause();playing=false;current=-1;$('play').textContent='▶ Tocar'}else if(current>i)current--;URL.revokeObjectURL(playlist[i].url);playlist.splice(i,1);updateTracks()}
-async function playIndex(i){if(!playlist.length)return;initAudio();await ctx.resume();current=(i+playlist.length)%playlist.length;audio.src=playlist[current].url;audio.volume=1;try{await audio.play();playing=true;$('play').textContent='⏸ Pausar';$('songName').textContent=playlist[current].name;$('status').textContent=''}catch(e){$('status').textContent='Não foi possível reproduzir este arquivo: '+e.message}updateTracks()}
-$('file').addEventListener('change',e=>{for(const f of e.target.files){let url=URL.createObjectURL(f);playlist.push({name:f.name.replace(/\.[^.]+$/,''),url})}updateTracks();if(current<0&&playlist.length)$('songName').textContent=playlist[0].name;e.target.value=''});
+async function playIndex(i){if(!playlist.length)return;initAudio();await ctx.resume();current=(i+playlist.length)%playlist.length;audio.pause();audio.src=playlist[current].url;audio.volume=1;await analyzeSong(playlist[current].file);try{await audio.play();playing=true;$('play').textContent='⏸ Pausar';$('songName').textContent=playlist[current].name;$('status').textContent=''}catch(e){$('status').textContent='Não foi possível reproduzir este arquivo: '+e.message}updateTracks()}
+$('file').addEventListener('change',e=>{for(const f of e.target.files){let url=URL.createObjectURL(f);playlist.push({name:f.name.replace(/\.[^.]+$/,''),url,file:f})}updateTracks();if(current<0&&playlist.length)$('songName').textContent=playlist[0].name;e.target.value=''});
 $('addBtn').onclick=()=>$('file').click();$('listBtn').onclick=()=>$('library').classList.toggle('open');$('closeBtn').onclick=()=>$('library').classList.remove('open');
 $('play').onclick=async()=>{initAudio();await ctx.resume();if(current<0){if(playlist.length)playIndex(0);else{$('library').classList.add('open');$('status').textContent='Adicione uma música para começar'}}else if(audio.paused){await audio.play();playing=true;$('play').textContent='⏸ Pausar'}else{audio.pause();playing=false;$('play').textContent='▶ Tocar'}};
 $('prev').onclick=()=>playIndex(current<=0?playlist.length-1:current-1);$('next').onclick=()=>playIndex(current+1);
@@ -47,10 +105,21 @@ let last=performance.now(),smoothEnergy=0;
 function frame(now){requestAnimationFrame(frame);let dt=Math.min((now-last)/1000,.05);last=now;elapsed+=dt;
 let energy=0;if(analyser&&playing){analyser.getByteFrequencyData(frequencyData);let sum=0;for(let i=1;i<90;i++)sum+=frequencyData[i];energy=sum/(89*255);smoothEnergy=smoothEnergy*.86+energy*.14;let threshold=Math.max(.12,smoothEnergy*1.38);if(energy>threshold&&elapsed-lastBeatTime>.24){let diff=elapsed-lastBeatTime;if(lastBeatTime>0&&diff<1.2){detectedBpm=Math.round(Math.max(60,Math.min(200,detectedBpm*.8+(60/diff)*.2)));beatInterval=60/detectedBpm}lastBeatTime=elapsed;beatStrength=1}}else smoothEnergy*=.97;
 beatStrength*=Math.exp(-dt*7);$('beat').textContent='♪ '+detectedBpm+' BPM';
-let speed=playing?6+smoothEnergy*9:4.5;if(mode==='surprise')speed+=Math.sin(elapsed*.6)*2;
-distance=(distance+dt*speed)%390;let x=pathX(distance),y=.03+Math.abs(Math.sin(distance*1.6))*.14+beatStrength*.2;orb.position.set(x,y,distance);orb.rotation.x+=dt*speed*2.1;orb.rotation.z+=dt*.65;inner.rotation.y+=dt*1.7;glow.position.set(x,2,distance);glow.intensity=12+beatStrength*24;
-let padIndex=Math.round(distance/8.8);if(padIndex!==lastHit&&padIndex>=0&&padIndex<pads.length&&Math.abs(distance-padIndex*8.8)<.65){lastHit=padIndex;if(ctx)tone(padIndex,.4+smoothEnergy);pads[padIndex].scale.setScalar(1.5)}for(const pad of pads){pad.scale.lerp(new THREE.Vector3(1,1,1),Math.min(1,dt*5));pad.rotation.y+=dt*.18}
+let t=playing?audio.currentTime:previewClock;
+if(!playing&&current<0)previewClock+=dt*2.4;
+let location=analysisReady&&onsets.length&&current>=0?trackAtTime(t):{z:(previewClock*5)%380,index:-1,phase:0};
+distance=location.z;
+let x=pathX(distance),y=.03+Math.abs(Math.sin(location.phase*Math.PI))*.32+beatStrength*.18;
+orb.position.set(x,y,distance);orb.rotation.x+=dt*(playing?8:3);orb.rotation.z+=dt*.65;inner.rotation.y+=dt*1.7;
+glow.position.set(x,2,distance);glow.intensity=12+beatStrength*24;
+if(playing&&analysisReady&&location.index>hitIndex&&location.index>=0){
+ hitIndex=location.index;beatStrength=1;
+ // Impacto visual no tempo do audio; a percussao original continua audivel, sem "tu-tu" artificial.
+ const pad=pads[location.index%pads.length];if(pad)pad.scale.setScalar(1.65);
+}
+if(playing&&analysisReady&&location.index<hitIndex)hitIndex=location.index;
+for(const pad of pads){pad.scale.lerp(new THREE.Vector3(1,1,1),Math.min(1,dt*8));pad.rotation.y+=dt*.18}
 let target;if(cameraMode===0)target=new THREE.Vector3(x,4.5,distance-10);else if(cameraMode===1)target=new THREE.Vector3(x+8,5,distance-3);else target=new THREE.Vector3(x,11,distance-5);
 camera.position.lerp(target,Math.min(1,dt*3));camera.lookAt(x,.1,distance+8);renderer.render(scene,camera)}
-requestAnimationFrame(frame);$('status').textContent='Cenário 3D pronto • adicione suas músicas na Playlist';
+requestAnimationFrame(frame);$('status').textContent='Escolha uma música: o percurso seguirá os ataques detectados';
 </script></body></html>
