@@ -1,7 +1,7 @@
 {
-  "name": "Nuvem Entrega Rápida",
-  "short_name": "Nuvem Entrega Rápida",
-  "description": "Organizador independente de rotas e clusters",
+  "name": "Nuvem Entregas Rápidas",
+  "short_name": "Nuvem Entregas Rápidas",
+  "description": "Organizador de rotas e clusters",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
