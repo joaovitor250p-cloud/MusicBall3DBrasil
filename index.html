@@ -267,7 +267,7 @@ function render(){document.querySelector('.app').classList.toggle('routes-mode',
 function tick(){const t=clock(),s=`${data.profile.id} · ${t}`;document.querySelectorAll('.watertext').forEach(e=>e.textContent=s);const live=$('liveTime');if(live)live.textContent=t}
 const pFields=[['name','Nome do motorista'],['id','Driver ID']];
 // As próximas opções de HUB podem ser acrescentadas aqui, mantendo o endereço associado.
-const HUBS=[{id:'mooca',name:'OF Mooca',address:'Rua Cadiriri, 666 - Pq da Mooca',city:'São Paulo - SP'}];
+const HUBS=[{id:'mooca',name:'OF Mooca',address:'Rua Cadiriri, 666 - Pq da Mooca',city:'São Paulo - SP'},{id:'sacoma',name:'OF Sacomã',address:'Rua Cel. Francisco Inácio, 887 - Vila Moinho Velho',city:'São Paulo - SP'}];
 // The footer is the date the route was first saved; the loading time is chosen by the user.
 const currentStamp=()=>new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
 function dateOnly(v){const text=String(v||'');const match=text.match(/\b\d{2}\/\d{2}\/\d{4}\b/);return match?match[0]:''}
